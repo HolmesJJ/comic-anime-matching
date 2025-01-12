@@ -46,7 +46,7 @@ def find_best_matching_frame(template_path, frame_folder):
 
 
 def display():
-    template_path = os.path.join(COMIC_DIR, '01', '8', '7.jpg')
+    template_path = os.path.join(COMIC_DIR, '01', 'page_13', '4.jpg')
     frame_folder = os.path.join(ANIME_DIR, '001')
     best_score, best_frame_path = find_best_matching_frame(template_path, frame_folder)
     print(best_score, best_frame_path)
