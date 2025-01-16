@@ -3,6 +3,7 @@ tqdm
 torch
 torchvision
 torchaudio
+pandas
 pillow
 matplotlib
 opencv-python
