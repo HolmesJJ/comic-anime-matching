@@ -2,10 +2,8 @@ import os
 import cv2
 import pandas as pd
 
-from PIL import Image
 from datetime import datetime
 from datetime import timedelta
-import matplotlib.pyplot as plt
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 
