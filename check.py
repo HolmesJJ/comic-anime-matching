@@ -76,7 +76,7 @@ def display_comic_and_video(data_df):
         video_id = str(row['Video ID'])
         comic_block_id = row['Comic Block ID']
         parts = comic_block_id.split('_')
-        comic_block_path = os.path.join(parts[0], f"page_{parts[1][4:]}", f"{parts[2]}.jpg")
+        comic_block_path = os.path.join(parts[0], f'page_{parts[1][4:]}', f'{parts[2]}.jpg')
         image_path = os.path.join(COMIC_DIR, comic_block_path)
         video_path = os.path.join(OUTPUT_DIR, f'{video_id}_{comic_block_id}.mp4')
         if not os.path.exists(image_path):
