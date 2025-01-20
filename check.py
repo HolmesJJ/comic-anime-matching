@@ -49,6 +49,34 @@ def check_timestamps(data_df, tolerance=1e-5):
         print(data_df.iloc[[curr_idx, next_idx]][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
 
 
+def analyze_comic_blocks(data_df, video_id, comic_id):
+    comic_id_dir = os.path.join(COMIC_DIR, comic_id)
+    data_df = data_df.dropna(subset=['Comic Block ID'])
+    data_df['Page'] = data_df['Comic Block ID'].str.split('_').str[2]
+    data_df['Image ID'] = data_df['Comic Block ID'].str.split('_').str[-1]
+    grouped = data_df.groupby('Page')['Image ID'].apply(set).to_dict()
+    results = []
+    for page, images_in_csv in grouped.items():
+        page_folder = os.path.join(comic_id_dir, f'page_{page}')
+        all_files = os.listdir(page_folder)
+        image_files = set()
+        for file_name in all_files:
+            image_files.add(os.path.splitext(file_name)[0])
+        present_in_csv = images_in_csv & image_files
+        missing_in_csv = sorted(image_files - images_in_csv)
+        results.append([
+            video_id,
+            page,
+            len(present_in_csv),
+            len(missing_in_csv),
+            len(image_files),
+            ','.join(missing_in_csv)
+        ])
+    result_df = pd.DataFrame(results, columns=['Video ID', 'Page', 'Images in CSV', 'Images Missing', 'Total Images',
+                                               'Missing Image Names'])
+    result_df.to_csv(os.path.join(OUTPUT_DIR, f'{video_id}_summary.csv'), index=False, encoding='utf-8')
+
+
 def extract_video_clips(data_df, video_file):
     with VideoFileClip(video_file) as video:
         for _, row in data_df.iterrows():
@@ -59,7 +87,8 @@ def extract_video_clips(data_df, video_file):
             video_id = str(row['Video ID'])
             comic_block_id = row['Comic Block ID']
             print(f'{video_id}_{comic_block_id}:', start_time, end_time)
-            output_path = os.path.join(OUTPUT_DIR, f'{video_id}_{comic_block_id}.mp4')
+            os.makedirs(os.path.join(OUTPUT_DIR, video_id), exist_ok=True)
+            output_path = os.path.join(OUTPUT_DIR, video_id, f'{comic_block_id}.mp4')
             try:
                 clip = video.subclip(start_time, end_time)
                 clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
@@ -78,7 +107,7 @@ def display_comic_and_video(data_df):
         parts = comic_block_id.split('_')
         comic_block_path = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
         image_path = os.path.join(COMIC_DIR, comic_block_path)
-        video_path = os.path.join(OUTPUT_DIR, f'{video_id}_{comic_block_id}.mp4')
+        video_path = os.path.join(OUTPUT_DIR, video_id, f'{comic_block_id}.mp4')
         if not os.path.exists(image_path):
             print(f'Image not found: {image_path}')
             continue
@@ -117,10 +146,13 @@ def display_comic_and_video(data_df):
 
 def run():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    video_file = os.path.join(ANIME_DIR, '001.mp4')
-    data_df = pd.read_csv(os.path.join(OUTPUT_DIR, '001.csv'), dtype={'Video ID': str})
+    video_id = '008'
+    comic_id = '01'
+    video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
+    data_df = pd.read_csv(os.path.join(OUTPUT_DIR, f'{video_id}.csv'), dtype={'Video ID': str})
     print(parse_timestamp('00:03:37:18'))
     check_timestamps(data_df)
+    analyze_comic_blocks(data_df, video_id, comic_id)
     extract_video_clips(data_df, video_file)
     display_comic_and_video(data_df)
 
