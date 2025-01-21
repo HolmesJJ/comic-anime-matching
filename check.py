@@ -1,5 +1,6 @@
 import os
 import cv2
+import time
 import shutil
 import argparse
 import pandas as pd
@@ -181,7 +182,7 @@ def display_comic_and_video(data_df, video_id, fps=24):
     final_video_path = os.path.join(OUTPUT_DIR, f'{video_id}.mp4')
     final_video.write_videofile(final_video_path, fps=fps)
     final_video.close()
-    # time.sleep(1000)
+    time.sleep(1000)
     shutil.rmtree(temp_dir)
 
 
