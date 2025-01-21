@@ -63,31 +63,35 @@ def check_timestamps(data_df, tolerance=1e-5):
     return len(violations1) == 0 and len(violations2) == 0
 
 
-def analyze_comic_blocks(data_df, video_id, comic_id):
-    comic_id_dir = os.path.join(COMIC_DIR, comic_id)
+def analyze_comic_blocks(data_df, video_id):
     data_df = data_df.dropna(subset=['Comic Block ID'])
+    data_df['Comic ID'] = data_df['Comic Block ID'].str.split('_').str[0]
     data_df['Page'] = data_df['Comic Block ID'].str.split('_').str[2]
     data_df['Image ID'] = data_df['Comic Block ID'].str.split('_').str[-1]
-    grouped = data_df.groupby('Page')['Image ID'].apply(set).to_dict()
     results = []
-    for page, images_in_csv in grouped.items():
-        page_folder = os.path.join(comic_id_dir, f'page_{page}')
-        all_files = os.listdir(page_folder)
-        image_files = set()
-        for file_name in all_files:
-            image_files.add(os.path.splitext(file_name)[0])
-        present_in_csv = images_in_csv & image_files
-        missing_in_csv = sorted(image_files - images_in_csv)
-        results.append([
-            video_id,
-            page,
-            len(present_in_csv),
-            len(missing_in_csv),
-            len(image_files),
-            ','.join(missing_in_csv)
-        ])
-    result_df = pd.DataFrame(results, columns=['Video ID', 'Page', 'Images in CSV', 'Images Missing', 'Total Images',
-                                               'Missing Image Names'])
+    for comic_id, comic_group in data_df.groupby('Comic ID'):
+        comic_id_dir = os.path.join(COMIC_DIR, comic_id)
+        grouped = comic_group.groupby('Page')['Image ID'].apply(set).to_dict()
+        for page, images_in_csv in grouped.items():
+            page_folder = os.path.join(comic_id_dir, f'page_{page}')
+            all_files = os.listdir(page_folder)
+            image_files = set()
+            for file_name in all_files:
+                image_files.add(os.path.splitext(file_name)[0])
+            present_in_csv = images_in_csv & image_files
+            missing_in_csv = sorted(image_files - images_in_csv)
+            results.append([
+                video_id,
+                comic_id,
+                page,
+                len(present_in_csv),
+                len(missing_in_csv),
+                len(image_files),
+                ','.join(missing_in_csv)
+            ])
+    result_df = pd.DataFrame(results, columns=[
+        'Video ID', 'Comic ID', 'Page', 'Images in CSV', 'Images Missing', 'Total Images', 'Missing Image Names'
+    ])
     result_df.to_csv(os.path.join(OUTPUT_DIR, f'{video_id}_summary.csv'), index=False, encoding='utf-8')
 
 
@@ -181,21 +185,20 @@ def display_comic_and_video(data_df, video_id, fps=24):
     shutil.rmtree(temp_dir)
 
 
-def run(video_id, comic_id):
+def run(video_id):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     data_df = pd.read_csv(os.path.join(OUTPUT_DIR, f'{video_id}.csv'), dtype={'Video ID': str})
     # print(parse_timestamp('00:03:37:18'))
     if check_timestamps(data_df):
-        analyze_comic_blocks(data_df, video_id, comic_id)
+        analyze_comic_blocks(data_df, video_id)
         extract_video_clips(data_df, video_file)
         display_comic_and_video(data_df, video_id)
 
 
 if __name__ == '__main__':
-    # run('001', '01')
+    # run('001')
     parser = argparse.ArgumentParser(description='Process video and comic IDs.')
     parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
-    parser.add_argument('-cid', '--comic_id', required=True, help="The ID of the comic (e.g., '01')")
     args = parser.parse_args()
-    run(args.video_id, args.comic_id)
+    run(args.video_id)
