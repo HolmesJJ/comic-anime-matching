@@ -55,6 +55,7 @@ def check_timestamps(data_df, tolerance=1e-5):
     for curr_idx, next_idx in violations:
         print(f'Violation between rows {curr_idx} and {next_idx}:')
         print(data_df.iloc[[curr_idx, next_idx]][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
+    return len(violations) == 0
 
 
 def analyze_comic_blocks(data_df, video_id, comic_id):
@@ -180,10 +181,10 @@ def run(video_id, comic_id):
     video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     data_df = pd.read_csv(os.path.join(OUTPUT_DIR, f'{video_id}.csv'), dtype={'Video ID': str})
     # print(parse_timestamp('00:03:37:18'))
-    check_timestamps(data_df)
-    analyze_comic_blocks(data_df, video_id, comic_id)
-    extract_video_clips(data_df, video_file)
-    display_comic_and_video(data_df, video_id)
+    if check_timestamps(data_df):
+        analyze_comic_blocks(data_df, video_id, comic_id)
+        extract_video_clips(data_df, video_file)
+        display_comic_and_video(data_df, video_id)
 
 
 if __name__ == '__main__':
