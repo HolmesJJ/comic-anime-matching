@@ -39,23 +39,28 @@ def check_timestamps(data_df, tolerance=1e-5):
         lambda x: parse_timestamp(x) if pd.notnull(x) else None)
     data_df['Parsed End Timestamp'] = data_df['End Timestamp'].apply(
         lambda x: parse_timestamp(x) if pd.notnull(x) else None)
-    violations = []
-    for i in range(len(data_df) - 1):
+    violations1 = []
+    violations2 = []
+    for i in range(len(data_df)):
         current_start = data_df.at[i, 'Parsed Start Timestamp']
         current_end = data_df.at[i, 'Parsed End Timestamp']
-        next_start = data_df.at[i + 1, 'Parsed Start Timestamp']
+        next_start = None
+        if i < len(data_df) - 1:
+            next_start = data_df.at[i + 1, 'Parsed Start Timestamp']
         if current_start and current_end and current_start >= current_end:
-            print(f'Invalid timestamp range in row {i}: Start >= End')
-            print(data_df.iloc[i][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
+            violations1.append(i)
         if current_end and next_start:
             expected_next_start = current_end + timedelta(milliseconds=(1000 / FRAME_RATE))
             if abs((next_start - expected_next_start).total_seconds()) > tolerance:
                 if not pd.isnull(data_df.at[i + 1, 'Comic Block ID']):
-                    violations.append((i, i + 1))
-    for curr_idx, next_idx in violations:
+                    violations2.append((i, i + 1))
+    for idx in violations1:
+        print(f'Invalid timestamp range in row {idx}: Start >= End')
+        print(data_df.iloc[idx][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
+    for curr_idx, next_idx in violations2:
         print(f'Violation between rows {curr_idx} and {next_idx}:')
         print(data_df.iloc[[curr_idx, next_idx]][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
-    return len(violations) == 0
+    return len(violations1) == 0 and len(violations2) == 0
 
 
 def analyze_comic_blocks(data_df, video_id, comic_id):
