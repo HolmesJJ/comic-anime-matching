@@ -1,10 +1,14 @@
 import os
 import cv2
+import shutil
+import argparse
 import pandas as pd
 
 from datetime import datetime
 from datetime import timedelta
+from moviepy.video.fx.resize import resize
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.compositing.concatenate import concatenate_videoclips
 
 
 ANIME_DIR = 'anime'
@@ -37,8 +41,12 @@ def check_timestamps(data_df, tolerance=1e-5):
         lambda x: parse_timestamp(x) if pd.notnull(x) else None)
     violations = []
     for i in range(len(data_df) - 1):
+        current_start = data_df.at[i, 'Parsed Start Timestamp']
         current_end = data_df.at[i, 'Parsed End Timestamp']
         next_start = data_df.at[i + 1, 'Parsed Start Timestamp']
+        if current_start and current_end and current_start >= current_end:
+            print(f'Invalid timestamp range in row {i}: Start >= End')
+            print(data_df.iloc[i][['Comic Block ID', 'Start Timestamp', 'End Timestamp']])
         if current_end and next_start:
             expected_next_start = current_end + timedelta(milliseconds=(1000 / FRAME_RATE))
             if abs((next_start - expected_next_start).total_seconds()) > tolerance:
@@ -97,12 +105,15 @@ def extract_video_clips(data_df, video_file):
                 print(f'Failed to process {video_id}_{comic_block_id}: {e}')
 
 
-def display_comic_and_video(data_df):
+def display_comic_and_video(data_df, video_id, fps=24):
     max_width = 480
+    temp_dir = os.path.join(OUTPUT_DIR, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_clips = []
     for _, row in data_df.iterrows():
         if pd.isna(row['Start Timestamp']) or pd.isna(row['End Timestamp']):
             continue
-        video_id = str(row['Video ID'])
         comic_block_id = row['Comic Block ID']
         parts = comic_block_id.split('_')
         comic_block_path = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
@@ -126,6 +137,8 @@ def display_comic_and_video(data_df):
         vid_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         vid_aspect_ratio = vid_height / vid_width
         vid_resized_height = int(max_width * vid_aspect_ratio)
+        video_writer = None
+        output_path = os.path.join(temp_dir, f'{video_id}_{comic_block_id}.mp4')
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -137,25 +150,46 @@ def display_comic_and_video(data_df):
             video_padded = cv2.copyMakeBorder(video_frame, 0, combined_height - vid_resized_height, 0, 0,
                                               cv2.BORDER_CONSTANT, value=[0, 0, 0])
             combined_frame = cv2.hconcat([img_padded, video_padded])
-            cv2.imshow(f'Comic and Video Viewer: {video_id}_{comic_block_id}', combined_frame)
-            if cv2.waitKey(int(1000 / 24)) & 0xFF == ord('q'):
-                break
+            # cv2.imshow(f'Comic and Video Viewer: {video_id}_{comic_block_id}', combined_frame)
+            # if cv2.waitKey(int(1000 / 24)) & 0xFF == ord('q'):
+            #     break
+            if video_writer is None:
+                output_frame_size = (combined_frame.shape[1], combined_frame.shape[0])
+                video_writer = cv2.VideoWriter(output_path, fourcc, fps, output_frame_size)
+            video_writer.write(combined_frame)
         cap.release()
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
+        video_writer.release()
+        video_clips.append(output_path)
+        print(f'Comic block {comic_block_id} done')
+    final_clips = []
+    for clip_path in video_clips:
+        clip = VideoFileClip(clip_path)
+        resized_clip = resize(clip, height=1080, width=1920)
+        final_clips.append(resized_clip)
+    final_video = concatenate_videoclips(final_clips, method='compose')
+    final_video_path = os.path.join(OUTPUT_DIR, f'{video_id}.mp4')
+    final_video.write_videofile(final_video_path, fps=fps)
+    final_video.close()
+    # time.sleep(1000)
+    shutil.rmtree(temp_dir)
 
 
-def run():
+def run(video_id, comic_id):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    video_id = '008'
-    comic_id = '01'
     video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     data_df = pd.read_csv(os.path.join(OUTPUT_DIR, f'{video_id}.csv'), dtype={'Video ID': str})
-    print(parse_timestamp('00:03:37:18'))
+    # print(parse_timestamp('00:03:37:18'))
     check_timestamps(data_df)
     analyze_comic_blocks(data_df, video_id, comic_id)
     extract_video_clips(data_df, video_file)
-    display_comic_and_video(data_df)
+    display_comic_and_video(data_df, video_id)
 
 
 if __name__ == '__main__':
-    run()
+    # run('001', '01')
+    parser = argparse.ArgumentParser(description='Process video and comic IDs.')
+    parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
+    parser.add_argument('-cid', '--comic_id', required=True, help="The ID of the comic (e.g., '01')")
+    args = parser.parse_args()
+    run(args.video_id, args.comic_id)

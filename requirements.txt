@@ -7,4 +7,5 @@ pandas
 pillow
 moviepy==1.0.3
 matplotlib
+pyinstaller
 opencv-python
