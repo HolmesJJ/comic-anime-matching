@@ -175,9 +175,9 @@ def display_comic_and_video(data_df, video_id, fps=24):
         print(f'Comic block {comic_block_id} done')
     final_clips = []
     for clip_path in video_clips:
-        clip = VideoFileClip(clip_path)
-        resized_clip = resize(clip, height=1080, width=1920)
-        final_clips.append(resized_clip)
+        with VideoFileClip(clip_path) as clip:
+            resized_clip = resize(clip, height=1080, width=1920)
+            final_clips.append(resized_clip)
     final_video = concatenate_videoclips(final_clips, method='compose')
     final_video_path = os.path.join(OUTPUT_DIR, f'{video_id}.mp4')
     final_video.write_videofile(final_video_path, fps=fps)
@@ -198,8 +198,8 @@ def run(video_id):
 
 
 if __name__ == '__main__':
-    # run('001')
-    parser = argparse.ArgumentParser(description='Process video and comic IDs.')
-    parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
-    args = parser.parse_args()
-    run(args.video_id)
+    run('009')
+    # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
+    # parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
+    # args = parser.parse_args()
+    # run(args.video_id)
