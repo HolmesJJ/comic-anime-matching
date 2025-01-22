@@ -198,8 +198,8 @@ def run(video_id):
 
 
 if __name__ == '__main__':
-    run('009')
-    # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
-    # parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
-    # args = parser.parse_args()
-    # run(args.video_id)
+    # run('001')
+    parser = argparse.ArgumentParser(description='Process video and comic IDs.')
+    parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
+    args = parser.parse_args()
+    run(args.video_id)
