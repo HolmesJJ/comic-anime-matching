@@ -1,6 +1,5 @@
 import os
 import cv2
-import time
 import shutil
 import argparse
 import pandas as pd
@@ -175,14 +174,15 @@ def display_comic_and_video(data_df, video_id, fps=24):
         print(f'Comic block {comic_block_id} done')
     final_clips = []
     for clip_path in video_clips:
-        with VideoFileClip(clip_path) as clip:
-            resized_clip = resize(clip, height=1080, width=1920)
-            final_clips.append(resized_clip)
+        clip = VideoFileClip(clip_path)
+        resized_clip = resize(clip, height=1080, width=1920)
+        final_clips.append(resized_clip)
     final_video = concatenate_videoclips(final_clips, method='compose')
     final_video_path = os.path.join(OUTPUT_DIR, f'{video_id}.mp4')
     final_video.write_videofile(final_video_path, fps=fps)
     final_video.close()
-    time.sleep(1000)
+    for clip in final_clips:
+        clip.close()
     shutil.rmtree(temp_dir)
 
 
