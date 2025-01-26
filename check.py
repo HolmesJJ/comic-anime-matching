@@ -126,15 +126,22 @@ def display_comic_and_video(data_df, video_id, fps=24):
             continue
         comic_block_id = row['Comic Block ID']
         parts = comic_block_id.split('_')
-        comic_block_path = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
-        image_path = os.path.join(COMIC_DIR, comic_block_path)
+        comic_block_path_jpg = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
+        comic_block_path_png = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.png')
+        image_path_jpg = os.path.join(COMIC_DIR, comic_block_path_jpg)
+        image_path_png = os.path.join(COMIC_DIR, comic_block_path_png)
         video_path = os.path.join(OUTPUT_DIR, video_id, f'{comic_block_id}.mp4')
-        if not os.path.exists(image_path):
-            print(f'Image not found: {image_path}')
+        if not os.path.exists(image_path_jpg) and not os.path.exists(image_path_png):
+            print(f'Image not found: {image_path_jpg} or {image_path_png}')
             continue
         if not os.path.exists(video_path):
             print(f'Video not found: {video_path}')
             continue
+        image_path = None
+        if os.path.exists(image_path_jpg):
+            image_path = image_path_jpg
+        elif os.path.exists(image_path_png):
+            image_path = image_path_png
         image = cv2.imread(image_path)
         img_aspect_ratio = image.shape[0] / image.shape[1]
         img_height = int(max_width * img_aspect_ratio)
