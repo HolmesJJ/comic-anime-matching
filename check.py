@@ -11,16 +11,18 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.compositing.concatenate import concatenate_videoclips
 
 
-ANIME_DIR = 'anime'
+ANIME_DIR = os.path.join('anime', '1')
 COMIC_DIR = 'comic'
-OUTPUT_DIR = 'output'
+OUTPUT_DIR = os.path.join('output', '1')
 FRAME_RATE = 24
 
 
 # ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of default=nokey=1:noprint_wrappers=1 001.mp4
 def get_total_frames(video_id):
     clip = VideoFileClip(os.path.join(ANIME_DIR, f'{video_id}.mp4'))
-    total_frames = int(clip.fps * clip.duration)
+    print('fps:', clip.fps)
+    print('duration:', clip.duration)
+    total_frames = clip.fps * clip.duration
     return total_frames
 
 
@@ -212,7 +214,7 @@ def run(video_id):
 
 
 if __name__ == '__main__':
-    # print("Total Frames:", get_total_frames('001'))
+    print("Total Frames:", get_total_frames('001'))
     # run('001')
     parser = argparse.ArgumentParser(description='Process video and comic IDs.')
     parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
