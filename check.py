@@ -4,6 +4,8 @@ import shutil
 import argparse
 import pandas as pd
 
+from PIL import Image
+from tqdm import tqdm
 from datetime import datetime
 from datetime import timedelta
 from moviepy.video.fx.resize import resize
@@ -11,9 +13,9 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.compositing.concatenate import concatenate_videoclips
 
 
-ANIME_DIR = os.path.join('anime', '1')
-COMIC_DIR = 'comic'
-OUTPUT_DIR = os.path.join('output', '1')
+ANIME_DIR = os.path.join('anime', 'One-Punch Man')
+COMIC_DIR = os.path.join('comic', 'One-Punch Man')
+OUTPUT_DIR = os.path.join('output', 'One-Punch Man')
 FRAME_RATE = 24
 
 
@@ -43,7 +45,7 @@ def timestamp_to_seconds(timestamp):
     return total_seconds
 
 
-def check_timestamps(data_df, tolerance=1e-5):
+def check_timestamps(data_df, use_keyframe_from_video, tolerance=1e-5):
     data_df['Parsed Start Timestamp'] = data_df['Start Timestamp'].apply(
         lambda x: parse_timestamp(x) if pd.notnull(x) else None)
     data_df['Parsed End Timestamp'] = data_df['End Timestamp'].apply(
@@ -61,7 +63,7 @@ def check_timestamps(data_df, tolerance=1e-5):
         if current_end and next_start:
             expected_next_start = current_end + timedelta(milliseconds=(1000 / FRAME_RATE))
             if abs((next_start - expected_next_start).total_seconds()) > tolerance:
-                if not pd.isnull(data_df.at[i + 1, 'Comic Block ID']):
+                if not use_keyframe_from_video and not pd.isnull(data_df.at[i + 1, 'Comic Block ID']):
                     violations2.append((i, i + 1))
     for idx in violations1:
         print(f'Invalid timestamp range in row {idx}: Start >= End')
@@ -104,54 +106,72 @@ def analyze_comic_blocks(data_df, video_id):
     result_df.to_csv(os.path.join(OUTPUT_DIR, f'{video_id}_summary.csv'), index=False, encoding='utf-8')
 
 
-def extract_video_clips(data_df, video_file):
+def extract_video_clips(data_df, video_file, use_keyframe_from_video):
     with VideoFileClip(video_file) as video:
-        for _, row in data_df.iterrows():
+        for idx, row in tqdm(data_df.iterrows(), total=len(data_df), desc='Extracting clips'):
             if pd.isna(row['Start Timestamp']) or pd.isna(row['End Timestamp']):
                 continue
             start_time = timestamp_to_seconds(row['Start Timestamp'])
             end_time = timestamp_to_seconds(row['End Timestamp'])
             video_id = str(row['Video ID'])
-            comic_block_id = row['Comic Block ID']
-            print(f'{video_id}_{comic_block_id}:', start_time, end_time)
+            if use_keyframe_from_video:
+                block_id = f'{idx + 1:03d}'
+            else:
+                block_id = row['Comic Block ID']
+            print(f'{video_id}_{block_id}:', start_time, end_time)
             os.makedirs(os.path.join(OUTPUT_DIR, video_id), exist_ok=True)
-            output_path = os.path.join(OUTPUT_DIR, video_id, f'{comic_block_id}.mp4')
+            output_path = os.path.join(OUTPUT_DIR, video_id, f'{block_id}.mp4')
             try:
                 clip = video.subclip(start_time, end_time)
                 clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
                 print(f'Saved clip: {output_path}')
             except Exception as e:
-                print(f'Failed to process {video_id}_{comic_block_id}: {e}')
+                print(f'Failed to process {video_id}_{block_id}: {e}')
 
 
-def display_comic_and_video(data_df, video_id, fps=24):
+def extract_frame_from_video(video_file, timestamp_str):
+    timestamp_sec = timestamp_to_seconds(timestamp_str)
+    with VideoFileClip(video_file) as clip:
+        frame = clip.get_frame(timestamp_sec)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        return frame
+
+
+def display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_video, fps=24):
     max_width = 480
     temp_dir = os.path.join(OUTPUT_DIR, 'temp')
     os.makedirs(temp_dir, exist_ok=True)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     video_clips = []
-    for _, row in data_df.iterrows():
+    for idx, row in tqdm(data_df.iterrows(), total=len(data_df), desc='Generating clips'):
         if pd.isna(row['Start Timestamp']) or pd.isna(row['End Timestamp']):
             continue
-        comic_block_id = row['Comic Block ID']
-        parts = comic_block_id.split('_')
-        comic_block_path_jpg = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
-        comic_block_path_png = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.png')
-        image_path_jpg = os.path.join(COMIC_DIR, comic_block_path_jpg)
-        image_path_png = os.path.join(COMIC_DIR, comic_block_path_png)
-        video_path = os.path.join(OUTPUT_DIR, video_id, f'{comic_block_id}.mp4')
-        if not os.path.exists(image_path_jpg) and not os.path.exists(image_path_png):
-            print(f'Image not found: {image_path_jpg} or {image_path_png}')
-            continue
-        if not os.path.exists(video_path):
-            print(f'Video not found: {video_path}')
-            continue
-        image_path = None
-        if os.path.exists(image_path_jpg):
-            image_path = image_path_jpg
-        elif os.path.exists(image_path_png):
-            image_path = image_path_png
-        image = cv2.imread(image_path)
+        if use_keyframe_from_video:
+            block_id = f'{idx + 1:03d}'
+            video_path = os.path.join(OUTPUT_DIR, video_id, f'{block_id}.mp4')
+            image = extract_frame_from_video(video_file, row['Key Timestamp'])
+            output_path = os.path.join(temp_dir, f'{video_id}_{block_id}.mp4')
+        else:
+            block_id = row['Comic Block ID']
+            parts = block_id.split('_')
+            comic_block_path_jpg = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.jpg')
+            comic_block_path_png = os.path.join(parts[0], f'page_{parts[2]}', f'{parts[3]}.png')
+            image_path_jpg = os.path.join(COMIC_DIR, comic_block_path_jpg)
+            image_path_png = os.path.join(COMIC_DIR, comic_block_path_png)
+            if not os.path.exists(image_path_jpg) and not os.path.exists(image_path_png):
+                print(f'Image not found: {image_path_jpg} or {image_path_png}')
+                continue
+            video_path = os.path.join(OUTPUT_DIR, video_id, f'{block_id}.mp4')
+            if not os.path.exists(video_path):
+                print(f'Video not found: {video_path}')
+                continue
+            image_path = None
+            if os.path.exists(image_path_jpg):
+                image_path = image_path_jpg
+            elif os.path.exists(image_path_png):
+                image_path = image_path_png
+            image = cv2.imread(image_path)
+            output_path = os.path.join(temp_dir, f'{video_id}_{block_id}.mp4')
         img_aspect_ratio = image.shape[0] / image.shape[1]
         img_height = int(max_width * img_aspect_ratio)
         image = cv2.resize(image, (max_width, img_height))
@@ -164,7 +184,6 @@ def display_comic_and_video(data_df, video_id, fps=24):
         vid_aspect_ratio = vid_height / vid_width
         vid_resized_height = int(max_width * vid_aspect_ratio)
         video_writer = None
-        output_path = os.path.join(temp_dir, f'{video_id}_{comic_block_id}.mp4')
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -187,7 +206,6 @@ def display_comic_and_video(data_df, video_id, fps=24):
         # cv2.destroyAllWindows()
         video_writer.release()
         video_clips.append(output_path)
-        print(f'Comic block {comic_block_id} done')
     final_clips = []
     for clip_path in video_clips:
         clip = VideoFileClip(clip_path)
@@ -202,21 +220,54 @@ def display_comic_and_video(data_df, video_id, fps=24):
     shutil.rmtree(temp_dir)
 
 
-def run(video_id):
+def generate_comic(data_df, video_id, video_file):
+    output_images = []
+    temp_image_dir = os.path.join(OUTPUT_DIR, 'temp_images')
+    os.makedirs(temp_image_dir, exist_ok=True)
+    for idx, row in tqdm(data_df.iterrows(), total=len(data_df), desc='Extracting frames for PDF'):
+        if pd.isna(row['Key Timestamp']):
+            continue
+        frame = extract_frame_from_video(video_file, row['Key Timestamp'])
+        image_path = os.path.join(temp_image_dir, f'{idx+1:03d}.jpg')
+        cv2.imwrite(image_path, frame)
+        output_images.append(image_path)
+    composite_images = []
+    for i in range(0, len(output_images), 3):
+        images = [Image.open(p).convert('RGB') for p in output_images[i:i + 3]]
+        widths = [img.width for img in images]
+        heights = [img.height for img in images]
+        max_width = max(widths)
+        total_height = sum(heights)
+        combined = Image.new('RGB', (max_width, total_height), (255, 255, 255))
+        y_offset = 0
+        for img in images:
+            combined.paste(img, (0, y_offset))
+            y_offset += img.height + 10
+        composite_images.append(combined)
+    pdf_path = os.path.join(OUTPUT_DIR, f'{video_id}.pdf')
+    composite_images[0].save(pdf_path, save_all=True, append_images=composite_images[1:])
+    print(f'PDF comic saved at: {pdf_path}')
+    shutil.rmtree(temp_image_dir)
+
+
+def run(video_id, use_keyframe_from_video):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     data_df = pd.read_csv(os.path.join(OUTPUT_DIR, f'{video_id}.csv'), dtype={'Video ID': str})
     # print(parse_timestamp('00:03:37:18'))
-    if check_timestamps(data_df):
-        analyze_comic_blocks(data_df, video_id)
-        extract_video_clips(data_df, video_file)
-        display_comic_and_video(data_df, video_id)
+    if check_timestamps(data_df, use_keyframe_from_video):
+        if not use_keyframe_from_video:
+            analyze_comic_blocks(data_df, video_id)
+        extract_video_clips(data_df, video_file, use_keyframe_from_video)
+        display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_video)
+        if use_keyframe_from_video:
+            generate_comic(data_df, video_id, video_file)
 
 
 if __name__ == '__main__':
-    print("Total Frames:", get_total_frames('001'))
-    # run('001')
-    parser = argparse.ArgumentParser(description='Process video and comic IDs.')
-    parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
-    args = parser.parse_args()
-    run(args.video_id)
+    # print('Total Frames:', get_total_frames('001'))
+    run('022', False)
+    # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
+    # parser.add_argument('-vid', '--video_id', required=True, help='The ID of the video (e.g., '001')')
+    # args = parser.parse_args()
+    # run(args.video_id)
