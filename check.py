@@ -38,6 +38,12 @@ def parse_timestamp(timestamp):
         return None
 
 
+def is_valid_timestamp(timestamp):
+    if timestamp is None or pd.isnull(timestamp):
+        return False
+    return timestamp.date() != datetime(1900, 1, 1).date()
+
+
 def timestamp_to_seconds(timestamp):
     time_part, frames = timestamp[:-3], int(timestamp[-2:])
     h, m, s = map(int, time_part.split(':'))
@@ -62,16 +68,16 @@ def check_timestamps(data_df, use_keyframe_from_video, tolerance=1e-5):
         next_start = None
         if i < len(data_df) - 1:
             next_start = data_df.at[i + 1, 'Parsed Start Timestamp']
-        if current_start and current_end and current_start >= current_end:
+        if is_valid_timestamp(current_start) and is_valid_timestamp(current_end) and current_start >= current_end:
             violations1.append(i)
-        if current_end and next_start:
+        if is_valid_timestamp(current_end) and is_valid_timestamp(next_start):
             expected_next_start = current_end + timedelta(milliseconds=(1000 / FRAME_RATE))
             if abs((next_start - expected_next_start).total_seconds()) > tolerance:
                 if not use_keyframe_from_video and not pd.isnull(data_df.at[i + 1, 'Comic Block ID']):
                     violations2.append((i, i + 1))
         if use_keyframe_from_video:
             key_ts = data_df.at[i, 'Parsed Key Timestamp']
-            if key_ts and current_start and current_end:
+            if is_valid_timestamp(key_ts) and is_valid_timestamp(current_start) and is_valid_timestamp(current_end):
                 if not (current_start <= key_ts <= current_end):
                     violations3.append(i)
     for idx in violations1:
@@ -294,8 +300,8 @@ def check_missing():
 if __name__ == '__main__':
     # check_missing()
     # print('Total Frames:', get_total_frames('001'))
-    # run('002', True)
-    parser = argparse.ArgumentParser(description='Process video and comic IDs.')
-    parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
-    args = parser.parse_args()
-    run(args.video_id, True)
+    run('001', True)
+    # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
+    # parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
+    # args = parser.parse_args()
+    # run(args.video_id, True)
