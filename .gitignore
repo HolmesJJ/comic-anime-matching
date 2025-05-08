@@ -9,6 +9,8 @@
 .pytest_cache
 __pycache__/
 cache/
+dist/
+build/
 
 # data
 anime/
