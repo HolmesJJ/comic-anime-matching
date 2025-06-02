@@ -8,4 +8,5 @@ pillow
 moviepy==1.0.3
 matplotlib
 pyinstaller
+google-genai
 opencv-python
