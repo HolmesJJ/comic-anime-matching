@@ -205,14 +205,6 @@ def extract_frames(video_id, video_file, interval=0.5):
     return frames
 
 
-def delete_frames(video_id):
-    frame_folder = os.path.join(OUTPUT_DIR, video_id)
-    pattern = os.path.join(frame_folder, f'frame_*.jpg')
-    files = glob.glob(pattern)
-    for file in tqdm(files, desc=f'Deleting frames in {video_id}'):
-        os.remove(file)
-
-
 def run(video_id):
     extension_path = os.path.join(EXTENSION_DIR, f'{video_id}.pkl')
     if os.path.exists(extension_path):
@@ -243,7 +235,6 @@ def run(video_id):
             print(video_path, image_path)
             base64_image = get_base64_images(image_path=image_path, frames=None)
             frames = extract_frames(video_id, video_path)
-            delete_frames(video_id)
             base64_images = get_base64_images(image_path=None, frames=frames)
             base64_images.insert(0, base64_image)
             prompt_content = read_prompt(PROMPT1_PATH).format(COMIC, 2000)
@@ -335,7 +326,6 @@ def show_output(video_id):
             cell.alignment = Alignment(wrap_text=True, vertical='top')
         video_path = os.path.join(OUTPUT_DIR, video_id,  f'{comic_id}_{page_folder}_{parts[3]}.mp4')
         frames = extract_frames(video_id, video_path)
-        delete_frames(video_id)
         base64_images = get_base64_images(image_path=None, frames=frames)
         pil_frames = []
         for base64_image in base64_images:
