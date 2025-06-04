@@ -8,14 +8,19 @@ from PIL import Image
 from tqdm import tqdm
 from datetime import datetime
 from datetime import timedelta
+from dotenv import load_dotenv
 from moviepy.video.fx.resize import resize
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.compositing.concatenate import concatenate_videoclips
 
 
-ANIME_DIR = os.path.join('anime', 'Naruto')
-COMIC_DIR = os.path.join('comic', 'Naruto')
-OUTPUT_DIR = os.path.join('output', 'Naruto')
+load_dotenv()
+
+COMIC = os.getenv('COMIC')
+ANIME_DIR = os.path.join(os.getenv('ANIME_DIR'), COMIC)
+COMIC_DIR = os.path.join(os.getenv('COMIC_DIR'), COMIC)
+OUTPUT_DIR = os.path.join(os.getenv('OUTPUT_DIR'), COMIC)
+
 FRAME_RATE = 30
 
 
@@ -305,8 +310,8 @@ def check_missing():
 if __name__ == '__main__':
     # check_missing()
     # print('Total Frames:', get_total_frames('001'))
-    # run('007', True, True)
-    run('026', False, False)
+    # run('020', True, True)
+    run('069', False, False)
     # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
     # parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
     # args = parser.parse_args()

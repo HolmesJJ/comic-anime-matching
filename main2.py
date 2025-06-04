@@ -8,13 +8,17 @@ import pickle
 
 from PIL import Image
 from tqdm import tqdm
+from dotenv import load_dotenv
 from torchvision import transforms
 
 
-ANIME_DIR = 'anime'
-COMIC_DIR = 'comic'
-CHECKPOINTS_DIR = 'checkpoints'
-OUTPUT_DIR = 'output'
+load_dotenv()
+
+COMIC = os.getenv('COMIC')
+ANIME_DIR = os.path.join(os.getenv('ANIME_DIR'), COMIC)
+COMIC_DIR = os.path.join(os.getenv('COMIC_DIR'), COMIC)
+OUTPUT_DIR = os.path.join(os.getenv('OUTPUT_DIR'), COMIC)
+CHECKPOINTS_DIR = os.getenv('CHECKPOINTS_DIR')
 
 
 transform = transforms.Compose([

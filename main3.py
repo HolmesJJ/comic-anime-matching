@@ -2,12 +2,17 @@ import os
 import time
 
 from google import genai
+from dotenv import load_dotenv
 
 
-GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20'
-GEMINI_KEYS_PATH = 'gemini_keys.txt'
-GEMINI_INVALID_KEYS_PATH = 'gemini_invalid_keys.txt'
-OUTPUT_DIR = os.path.join('output', 'Dragon Ball', '1')
+load_dotenv()
+
+GEMINI_MODEL = os.getenv('GEMINI_MODEL')
+# GEMINI_KEY = os.getenv('GEMINI_KEY')
+GEMINI_KEYS_PATH = os.getenv('GEMINI_KEYS_PATH')
+GEMINI_INVALID_KEYS_PATH = os.getenv('GEMINI_INVALID_KEYS_PATH')
+COMIC = os.getenv('COMIC')
+OUTPUT_DIR = os.path.join(os.getenv('OUTPUT_DIR'), COMIC)
 
 
 def load_gemini_keys():

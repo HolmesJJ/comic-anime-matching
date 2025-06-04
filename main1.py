@@ -7,10 +7,14 @@ import torch
 from PIL import Image
 from clip import clip
 from tqdm import tqdm
+from dotenv import load_dotenv
 
 
-ANIME_DIR = 'anime'
-COMIC_DIR = 'comic'
+load_dotenv()
+
+COMIC = os.getenv('COMIC')
+ANIME_DIR = os.path.join(os.getenv('ANIME_DIR'), COMIC)
+COMIC_DIR = os.path.join(os.getenv('COMIC_DIR'), COMIC)
 
 
 def find_best_matching_frame(template_path, frame_folder):

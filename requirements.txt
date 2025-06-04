@@ -1,12 +1,16 @@
 timm
 tqdm
+numpy
+openai
 torch
-torchvision
 torchaudio
+torchvision
 pandas
 pillow
+openpyxl
 moviepy==1.0.3
 matplotlib
 pyinstaller
 google-genai
 opencv-python
+python-dotenv

@@ -16,6 +16,8 @@ build/
 anime/
 comic/
 checkpoints/
+extension/
 output/
 venv/
 gemini_keys.txt
+gemini_invalid_keys.txt
