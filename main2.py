@@ -103,14 +103,14 @@ def display():
 
 
 def run():
-    video = '001'
+    video_id = '001'
     start, end = 6, 35
     template_paths = []
     for i in range(start, end + 1):
         folder_path = os.path.join(COMIC_DIR, '01', f'page_{i}')
         template_paths.extend(glob.glob(os.path.join(folder_path, '*.jpg')))
         template_paths.extend(glob.glob(os.path.join(folder_path, '*.png')))
-    frame_folder = os.path.join(ANIME_DIR, video)
+    frame_folder = os.path.join(ANIME_DIR, video_id)
     model_name = 'dino_vitb8'
     model_path = os.path.join(CHECKPOINTS_DIR, 'dino_vitbase8_pretrain.pth')
     scores = {}
@@ -123,13 +123,13 @@ def run():
         best_frame_name, best_score = sorted_scores[0]
         print(best_frame_name, best_score)
         scores[template_path] = frame_scores
-        with open(os.path.join(OUTPUT_DIR, f'{video},pkl'), 'wb') as f:
+        with open(os.path.join(OUTPUT_DIR, f'{video_id}.pkl'), 'wb') as f:
             pickle.dump(scores, f)
 
 
 def load():
-    video = '001'
-    with open(os.path.join(OUTPUT_DIR, f'{video},pkl'), 'rb') as file:
+    video_id = '001'
+    with open(os.path.join(OUTPUT_DIR, f'{video_id}.pkl'), 'rb') as file:
         scores = pickle.load(file)
     for template_path, frame_scores in scores.items():
         max_item = max(frame_scores.items(), key=lambda x: x[1])

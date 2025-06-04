@@ -1,11 +1,14 @@
 import io
 import os
 import cv2
+import glob
 import time
 import base64
+import subprocess
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image as PILImage
@@ -150,34 +153,26 @@ def get_base64_images(image_path=None, frames=None):
         return base64_images
 
 
-def show_video_frames(video_path, interval=0.5):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f'Invalid video: {video_path}')
-        return
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_interval = int(fps * interval)
-    start_frame = 10
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    frame_count = start_frame
-    frames = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_count % frame_interval == 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame_rgb)
-        frame_count += 1
-    cap.release()
-    frames_per_row = 6
+def show_frames(video_id, video_file, interval=0.5):
+    frame_folder = os.path.join(OUTPUT_DIR, video_id)
+    os.makedirs(frame_folder, exist_ok=True)
+    pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
+    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', '0', pattern]
+    try:
+        print(f'{video_id} extract frames...')
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f'{video_id} extract frames error')
+    frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
     target_height = 200
+    frames_per_row = 6
     resized_frames = []
-    for frame in frames:
-        h, w, _ = frame.shape
-        aspect_ratio = w / h
-        new_w = int(target_height * aspect_ratio)
-        resized = cv2.resize(frame, (new_w, target_height))
+    for frame_file in frame_files:
+        img = cv2.imread(frame_file)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        h, w, _ = img.shape
+        new_w = int(target_height * (w / h))
+        resized = cv2.resize(img, (new_w, target_height))
         resized_frames.append(resized)
     num_rows = (len(resized_frames) + frames_per_row - 1) // frames_per_row
     fig, axs = plt.subplots(num_rows, frames_per_row, figsize=(frames_per_row * 3, num_rows * 2))
@@ -193,38 +188,40 @@ def show_video_frames(video_path, interval=0.5):
     plt.show()
 
 
-def get_video_frames(video_path, interval=0.5):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f'Invalid video: {video_path}')
-        return
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_interval = int(fps * interval)
-    start_frame = 10
-    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-    frame_count = start_frame
-    frames = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_count % frame_interval == 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame_rgb)
-        frame_count += 1
-    cap.release()
+def extract_frames(video_id, video_file, interval=0.5):
+    frame_folder = os.path.join(OUTPUT_DIR, video_id)
+    os.makedirs(frame_folder, exist_ok=True)
+    pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
+    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', '0', pattern]
+    try:
+        print(f'{video_id} extract frames...')
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f'{video_id} extract frames error')
+    frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
+    frames = [cv2.imread(f) for f in frame_files]
+    for frame_file in frame_files:
+        os.remove(frame_file)
     return frames
 
 
-def run(anime):
-    extension_path = os.path.join(EXTENSION_DIR, f'{anime}.pkl')
+def delete_frames(video_id):
+    frame_folder = os.path.join(OUTPUT_DIR, video_id)
+    pattern = os.path.join(frame_folder, f'frame_*.jpg')
+    files = glob.glob(pattern)
+    for file in tqdm(files, desc=f'Deleting frames in {video_id}'):
+        os.remove(file)
+
+
+def run(video_id):
+    extension_path = os.path.join(EXTENSION_DIR, f'{video_id}.pkl')
     if os.path.exists(extension_path):
         df = pd.read_pickle(extension_path)
         responses = df['response'].tolist()
     else:
         df = pd.DataFrame(columns=['comic_block_id', 'response'])
         responses = []
-    for root, dirs, files in os.walk(os.path.join(OUTPUT_DIR, anime), topdown=True):
+    for root, dirs, files in os.walk(os.path.join(OUTPUT_DIR, video_id), topdown=True):
         for file in files:
             video_path = os.path.join(root, file)
             file_name = os.path.basename(video_path)
@@ -242,10 +239,11 @@ def run(anime):
             if not image_path:
                 print(f'Image path is missing or invalid: {image_path_jpg, image_path_png}')
                 continue
-            # show_video_frames(video_path)
+            # show_frames(video_id, video_path)
             print(video_path, image_path)
             base64_image = get_base64_images(image_path=image_path, frames=None)
-            frames = get_video_frames(video_path)
+            frames = extract_frames(video_id, video_path)
+            delete_frames(video_id)
             base64_images = get_base64_images(image_path=None, frames=frames)
             base64_images.insert(0, base64_image)
             prompt_content = read_prompt(PROMPT1_PATH).format(COMIC, 2000)
@@ -287,8 +285,8 @@ def run(anime):
             print(f'[Saved] {comic_block_id} -> pickle ({len(df)} total)')
 
 
-def show_output(anime):
-    extension_path = os.path.join(EXTENSION_DIR, f'{anime}.pkl')
+def show_output(video_id):
+    extension_path = os.path.join(EXTENSION_DIR, f'{video_id}.pkl')
     df = pd.read_pickle(extension_path)
     max_image_size = 256
     char_per_line = 80
@@ -335,8 +333,9 @@ def show_output(anime):
         for col_letter in ['C']:
             cell = ws[f'{col_letter}{idx + 2}']
             cell.alignment = Alignment(wrap_text=True, vertical='top')
-        video_path = os.path.join(OUTPUT_DIR, anime,  f'{comic_id}_{page_folder}_{parts[3]}.mp4')
-        frames = get_video_frames(video_path)
+        video_path = os.path.join(OUTPUT_DIR, video_id,  f'{comic_id}_{page_folder}_{parts[3]}.mp4')
+        frames = extract_frames(video_id, video_path)
+        delete_frames(video_id)
         base64_images = get_base64_images(image_path=None, frames=frames)
         pil_frames = []
         for base64_image in base64_images:
@@ -386,4 +385,4 @@ def show_output(anime):
 
 if __name__ == '__main__':
     run('145')
-    show_output('145')
+    # show_output('145')

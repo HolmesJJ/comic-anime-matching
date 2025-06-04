@@ -49,8 +49,8 @@ def get_response(model_key, video_path):
     return response.text
 
 
-def run(anime):
-    for root, dirs, files in os.walk(os.path.join(OUTPUT_DIR, anime), topdown=True):
+def run(video_id):
+    for root, dirs, files in os.walk(os.path.join(OUTPUT_DIR, video_id), topdown=True):
         for file in files:
             video_path = os.path.join(root, file)
             print(video_path)
