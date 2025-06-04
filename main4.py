@@ -279,7 +279,7 @@ def run(anime):
                 if not is_error_429:
                     break
             if response is None:
-                response = get_response(GPT_O3_MODEL, GPT_KEY, prompt_content, base64_images)
+                response = get_response(GPT_4O_MODEL, GPT_KEY, prompt_content, base64_images)
             print('Response:', response)
             df.loc[len(df)] = [comic_block_id, response]
             df.to_pickle(extension_path)
