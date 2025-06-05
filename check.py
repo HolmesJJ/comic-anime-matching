@@ -313,7 +313,7 @@ def run(video_id, use_keyframe_from_video, use_camera_id):
     if check_timestamps(data_df, use_keyframe_from_video):
         if not use_keyframe_from_video:
             analyze_comic_blocks(data_df, video_id)
-        # extract_frames(video_id, video_file, use_camera_id)
+        extract_frames(video_id, video_file, use_camera_id)
         print(f'{video_id} total frames:', get_total_frames(video_id, use_camera_id))
         extract_video_clips(video_id, data_df, use_keyframe_from_video, use_camera_id)
         display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_video, use_camera_id)
