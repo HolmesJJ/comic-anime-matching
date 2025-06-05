@@ -137,7 +137,7 @@ def get_base64_images(image_path=None, frames=None):
     elif frames:
         base64_images = []
         for frame in frames:
-            pil_img = PILImage.fromarray(frame)
+            pil_img = PILImage.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             width, height = pil_img.size
             if width < height:
                 scale = min(768 / width, 2000 / height)
@@ -157,7 +157,7 @@ def show_frames(video_id, video_file, interval=0.5):
     frame_folder = os.path.join(OUTPUT_DIR, video_id)
     os.makedirs(frame_folder, exist_ok=True)
     pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
-    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', '0', pattern]
+    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', 'passthrough', pattern]
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
@@ -192,7 +192,7 @@ def extract_frames(video_id, video_file, interval=0.5):
     frame_folder = os.path.join(OUTPUT_DIR, video_id)
     os.makedirs(frame_folder, exist_ok=True)
     pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
-    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', '0', pattern]
+    cmd = ['ffmpeg', '-i', video_file, '-vf', f'fps=1/{interval}', '-vsync', 'passthrough', pattern]
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
@@ -335,6 +335,7 @@ def show_output(video_id):
         target_height = 100
         resized_frames = []
         for img in pil_frames:
+            img = img.convert('RGB')
             w, h = img.size
             new_width = int(target_height * w / h)
             resized = img.resize((new_width, target_height), PILImage.Resampling.LANCZOS)
@@ -374,5 +375,5 @@ def show_output(video_id):
 
 
 if __name__ == '__main__':
-    run('145')
-    # show_output('145')
+    # run('145')
+    show_output('145')
