@@ -8,7 +8,6 @@ import subprocess
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from tqdm import tqdm
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image as PILImage
@@ -375,5 +374,7 @@ def show_output(video_id):
 
 
 if __name__ == '__main__':
-    # run('145')
-    show_output('145')
+    for i in range(1, 79):
+        print(f'{i:03d}')
+        run(f'{i:03d}')
+        # show_output('145')

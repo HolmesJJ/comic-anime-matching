@@ -128,7 +128,8 @@ def get_total_frames(video_id, use_camera_id):
     return len(frame_files)
 
 
-def extract_frames(video_id, video_file, use_camera_id):
+def extract_frames(video_id, use_camera_id):
+    video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(frame_folder, exist_ok=True)
@@ -187,7 +188,7 @@ def extract_frame_from_video(video_id, use_camera_id, timestamp):
     return frame
 
 
-def display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_video, use_camera_id, fps=24):
+def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_camera_id):
     max_width = 480
     temp_dir = os.path.join(OUTPUT_DIR, 'temp')
     os.makedirs(temp_dir, exist_ok=True)
@@ -200,7 +201,7 @@ def display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_vid
             block_id = f'{idx + 1:03d}'
             folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
             video_path = os.path.join(OUTPUT_DIR, folder_name, f'{block_id}.mp4')
-            image = extract_frame_from_video(video_file, row['Key Timestamp'])
+            image = extract_frame_from_video(video_id, use_camera_id, row['Key Timestamp'])
             output_path = os.path.join(temp_dir, f'{video_id}_{block_id}.mp4')
         else:
             block_id = row['Comic Block ID']
@@ -252,7 +253,7 @@ def display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_vid
             #     break
             if video_writer is None:
                 output_frame_size = (combined_frame.shape[1], combined_frame.shape[0])
-                video_writer = cv2.VideoWriter(output_path, fourcc, fps, output_frame_size)
+                video_writer = cv2.VideoWriter(output_path, fourcc, FRAME_RATE, output_frame_size)
             video_writer.write(combined_frame)
         cap.release()
         # cv2.destroyAllWindows()
@@ -266,21 +267,21 @@ def display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_vid
     final_video = concatenate_videoclips(final_clips, method='compose')
     filename = f'{video_id}_updated.mp4' if use_camera_id else f'{video_id}.mp4'
     final_video_path = os.path.join(OUTPUT_DIR, filename)
-    final_video.write_videofile(final_video_path, fps=fps)
+    final_video.write_videofile(final_video_path, fps=FRAME_RATE)
     final_video.close()
     for clip in final_clips:
         clip.close()
     shutil.rmtree(temp_dir)
 
 
-def generate_comic(data_df, video_id, video_file, use_camera_id):
+def generate_comic(data_df, video_id, use_camera_id):
     output_images = []
     temp_image_dir = os.path.join(OUTPUT_DIR, 'temp_images')
     os.makedirs(temp_image_dir, exist_ok=True)
     for idx, row in tqdm(data_df.iterrows(), total=len(data_df), desc='Extracting frames for PDF'):
         if pd.isna(row['Key Timestamp']):
             continue
-        frame = extract_frame_from_video(video_file, use_camera_id, row['Key Timestamp'])
+        frame = extract_frame_from_video(video_id, use_camera_id, row['Key Timestamp'])
         image_path = os.path.join(temp_image_dir, f'{idx+1:03d}.jpg')
         cv2.imwrite(image_path, frame)
         output_images.append(image_path)
@@ -306,19 +307,18 @@ def generate_comic(data_df, video_id, video_file, use_camera_id):
 
 def run(video_id, use_keyframe_from_video, use_camera_id):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    video_file = os.path.join(ANIME_DIR, f'{video_id}.mp4')
     filename = f'{video_id}_updated.csv' if use_camera_id else f'{video_id}.csv'
     data_df = pd.read_csv(os.path.join(OUTPUT_DIR, filename), dtype={'Video ID': str})
     # print(parse_timestamp('00:03:37:18'))
     if check_timestamps(data_df, use_keyframe_from_video):
         if not use_keyframe_from_video:
             analyze_comic_blocks(data_df, video_id)
-        extract_frames(video_id, video_file, use_camera_id)
+        extract_frames(video_id, use_camera_id)
         print(f'{video_id} total frames:', get_total_frames(video_id, use_camera_id))
         extract_video_clips(video_id, data_df, use_keyframe_from_video, use_camera_id)
-        display_comic_and_video(data_df, video_id, video_file, use_keyframe_from_video, use_camera_id)
+        display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_camera_id)
         if use_keyframe_from_video:
-            generate_comic(data_df, video_id, video_file, use_camera_id)
+            generate_comic(data_df, video_id, use_camera_id)
         delete_frames(video_id, use_camera_id)
 
 
@@ -340,8 +340,10 @@ def check_missing():
 if __name__ == '__main__':
     # check_missing()
     # print('Total Frames:', get_total_frames('001'))
-    # run('026', True, True)
-    run('145', False, False)
+    # run('029', True, True)
+    for i in range(46, 79):
+        print(f'{i:03d}')
+        run(f'{i:03d}', False, False)
     # parser = argparse.ArgumentParser(description='Process video and comic IDs.')
     # parser.add_argument('-vid', '--video_id', required=True, help="The ID of the video (e.g., '001')")
     # args = parser.parse_args()
