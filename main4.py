@@ -245,17 +245,17 @@ def run(video_id):
                 if key in gemini_invalid_keys:
                     continue
                 print('Gemini Key:', key)
-                is_error_429 = False
+                is_error = False
                 while True:
                     try:
                         response = get_response(GEMINI_MODEL, key, prompt_content, base64_images, GEMINI_URL)
                         break
                     except Exception as e:
                         error_message = str(e)
-                        if 'Error code: 429' in error_message:
-                            print('Error 429:', e)
+                        if 'Error code: 403' in error_message or 'Error code: 429' in error_message:
+                            print('Error 403 / 429:', e)
                             save_gemini_invalid_key(key)
-                            is_error_429 = True
+                            is_error = True
                             break
                         elif 'Error code: 503' in error_message:
                             print('Error 503:', e)
@@ -264,7 +264,7 @@ def run(video_id):
                         else:
                             print('Error:', e)
                             break
-                if not is_error_429:
+                if not is_error:
                     break
             if response is None:
                 response = get_response(GPT_4O_MODEL, GPT_KEY, prompt_content, base64_images)
