@@ -236,7 +236,7 @@ def run(video_id):
             frames = extract_frames(video_id, video_path)
             base64_images = get_base64_images(image_path=None, frames=frames)
             base64_images.insert(0, base64_image)
-            prompt_content = read_prompt(PROMPT1_PATH).format(COMIC, 2000)
+            prompt_content = read_prompt(PROMPT1_PATH).format(COMIC)
             print(prompt_content)
             gemini_keys = load_gemini_keys()
             gemini_invalid_keys = load_gemini_invalid_keys()
@@ -267,7 +267,7 @@ def run(video_id):
                 if not is_error:
                     break
             if response is None:
-                response = get_response(GPT_4O_MODEL, GPT_KEY, prompt_content, base64_images)
+                response = get_response(GPT_O3_MODEL, GPT_KEY, prompt_content, base64_images)
             print('Response:', response)
             df.loc[len(df)] = [comic_block_id, response]
             df.to_pickle(extension_path)
