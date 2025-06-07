@@ -241,10 +241,12 @@ def run(video_id):
             gemini_keys = load_gemini_keys()
             gemini_invalid_keys = load_gemini_invalid_keys()
             response = None
+            is_all_invalid = True
             for key in gemini_keys:
                 if key in gemini_invalid_keys:
                     continue
                 print('Gemini Key:', key)
+                is_all_invalid = False
                 is_error = False
                 while True:
                     try:
@@ -266,6 +268,8 @@ def run(video_id):
                             break
                 if not is_error:
                     break
+            if is_all_invalid:
+                raise ValueError('All gemini keys are invalid.')
             if response is None:
                 response = get_response(GPT_O3_MODEL, GPT_KEY, prompt_content, base64_images)
             print('Response:', response)
@@ -374,7 +378,7 @@ def show_output(video_id):
 
 
 if __name__ == '__main__':
-    for i in range(1, 79):
+    for i in range(1, 5):
         print(f'{i:03d}')
         run(f'{i:03d}')
-        # show_output('145')
+        show_output(f'{i:03d}')
