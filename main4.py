@@ -195,13 +195,28 @@ def extract_frames(video_id, video_file, interval=0.5):
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         print(f'{video_id} extract frames error')
     frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
     frames = [cv2.imread(f) for f in frame_files]
     for frame_file in frame_files:
         os.remove(frame_file)
     return frames
+
+
+def extract_first_frame(video_id, video_file):
+    frame_folder = os.path.join(OUTPUT_DIR, video_id)
+    os.makedirs(frame_folder, exist_ok=True)
+    frame_path = os.path.join(frame_folder, 'frame_000001.jpg')
+    cmd = ['ffmpeg', '-i', video_file, '-frames:v', '1', frame_path]
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        frame = cv2.imread(frame_path)
+        os.remove(frame_path)
+        return frame
+    except subprocess.CalledProcessError:
+        print(f'{video_id} extract frames error')
+        return None
 
 
 def run(video_id):
@@ -234,6 +249,8 @@ def run(video_id):
             print(video_path, image_path)
             base64_image = get_base64_images(image_path=image_path, frames=None)
             frames = extract_frames(video_id, video_path)
+            if len(frames) == 0:
+                frames = [extract_first_frame(video_id, video_path)]
             base64_images = get_base64_images(image_path=None, frames=frames)
             base64_images.insert(0, base64_image)
             prompt_content = read_prompt(PROMPT1_PATH).format(COMIC)
@@ -329,6 +346,8 @@ def show_output(video_id):
             cell.alignment = Alignment(wrap_text=True, vertical='top')
         video_path = os.path.join(OUTPUT_DIR, video_id,  f'{comic_id}_{page_folder}_{parts[3]}.mp4')
         frames = extract_frames(video_id, video_path)
+        if len(frames) == 0:
+            frames = [extract_first_frame(video_id, video_path)]
         base64_images = get_base64_images(image_path=None, frames=frames)
         pil_frames = []
         for base64_image in base64_images:
