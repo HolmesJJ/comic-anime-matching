@@ -261,9 +261,19 @@ def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_came
         video_clips.append(output_path)
     final_clips = []
     for clip_path in video_clips:
-        clip = VideoFileClip(clip_path)
-        resized_clip = resize(clip, height=1080, width=1920)
-        final_clips.append(resized_clip)
+        try:
+            clip = VideoFileClip(clip_path)
+            if clip.duration == 0:
+                print(f'Skipping empty clip: {clip_path}')
+                continue
+            try:
+                resized_clip = resize(clip, height=1080, width=1920)
+            except MemoryError as e:
+                print(f'MemoryError at {clip_path}, fallback to 720p: {e}')
+                resized_clip = resize(clip, height=720, width=1280)
+            final_clips.append(resized_clip)
+        except Exception as e:
+            print(f'Error loading clip {clip_path}: {e}')
     final_video = concatenate_videoclips(final_clips, method='compose')
     filename = f'{video_id}_updated.mp4' if use_camera_id else f'{video_id}.mp4'
     final_video_path = os.path.join(OUTPUT_DIR, filename)
