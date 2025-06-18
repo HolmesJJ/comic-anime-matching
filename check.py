@@ -134,7 +134,7 @@ def extract_frames(video_id, use_camera_id):
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(frame_folder, exist_ok=True)
     pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
-    cmd = ['ffmpeg', '-i', video_file, '-vsync', '0', '-q:v', '8', pattern]
+    cmd = ['ffmpeg', '-i', video_file, '-vsync', '0', '-q:v', '15', pattern]
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
