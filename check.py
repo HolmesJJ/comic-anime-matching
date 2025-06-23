@@ -138,8 +138,8 @@ def extract_frames(video_id, use_camera_id):
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        print(f'{video_id} extract frames error')
+    except subprocess.CalledProcessError as e:
+        print(f'{video_id} extract frames error: {e}')
 
 
 def delete_frames(video_id, use_camera_id):
@@ -186,6 +186,18 @@ def extract_frame_from_video(video_id, use_camera_id, timestamp):
     frame_path = os.path.join(frame_folder, f'frame_{frame_index:06d}.jpg')
     frame = cv2.imread(frame_path)
     return frame
+
+
+def safe_resize(clip, max_height=1080, min_height=240, step=120):
+    original_w, original_h = clip.size
+    for height in range(max_height, min_height - 1, -step):
+        scale = height / original_h
+        width = int(original_w * scale)
+        try:
+            return resize(clip, height=height)
+        except MemoryError as e:
+            print(f'MemoryError at resolution {width}x{height}, trying lower: {e}')
+    raise MemoryError("All fallback resolutions failed due to memory constraints.")
 
 
 def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_camera_id):
@@ -258,6 +270,8 @@ def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_came
         cap.release()
         # cv2.destroyAllWindows()
         video_writer.release()
+        del cap
+        del video_writer
         video_clips.append(output_path)
     final_clips = []
     for clip_path in video_clips:
@@ -267,11 +281,10 @@ def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_came
                 print(f'Skipping empty clip: {clip_path}')
                 continue
             try:
-                resized_clip = resize(clip, height=1080, width=1920)
+                resized_clip = safe_resize(clip)
+                final_clips.append(resized_clip)
             except MemoryError as e:
-                print(f'MemoryError at {clip_path}, fallback to 720p: {e}')
-                resized_clip = resize(clip, height=720, width=1280)
-            final_clips.append(resized_clip)
+                print(f"Failed to resize clip {clip_path}: {e}")
         except Exception as e:
             print(f'Error loading clip {clip_path}: {e}')
     final_video = concatenate_videoclips(final_clips, method='compose')
@@ -307,10 +320,13 @@ def generate_comic(data_df, video_id, use_camera_id):
         for img in images:
             combined.paste(img, (0, y_offset))
             y_offset += img.height + 10
+            img.close()
         composite_images.append(combined)
     filename = f'{video_id}_updated.pdf' if use_camera_id else f'{video_id}.pdf'
     pdf_path = os.path.join(OUTPUT_DIR, filename)
     composite_images[0].save(pdf_path, save_all=True, append_images=composite_images[1:])
+    for img in composite_images:
+        img.close()
     print(f'PDF comic saved at: {pdf_path}')
     shutil.rmtree(temp_image_dir)
 
