@@ -124,7 +124,7 @@ def analyze_comic_blocks(data_df, video_id):
 def get_total_frames(video_id, use_camera_id):
     folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
-    frame_files = glob.glob(os.path.join(frame_folder, 'frame_*.jpg'))
+    frame_files = glob.glob(os.path.join(frame_folder, 'frame_*.png'))
     return len(frame_files)
 
 
@@ -133,8 +133,9 @@ def extract_frames(video_id, use_camera_id):
     folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
     os.makedirs(frame_folder, exist_ok=True)
-    pattern = os.path.join(frame_folder, f'frame_%06d.jpg')
-    cmd = ['ffmpeg', '-i', video_file, '-vsync', '0', '-q:v', '15', pattern]
+    pattern = os.path.join(frame_folder, f'frame_%06d.png')
+    cmd = ['ffmpeg', '-i', video_file, '-vsync', '0', pattern]
+    # cmd = ['ffmpeg', '-i', video_file, '-vsync', '0', '-q:v', '30', pattern]
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
@@ -145,7 +146,7 @@ def extract_frames(video_id, use_camera_id):
 def delete_frames(video_id, use_camera_id):
     folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
-    pattern = os.path.join(frame_folder, f'frame_*.jpg')
+    pattern = os.path.join(frame_folder, f'frame_*.png')
     files = glob.glob(pattern)
     for file in tqdm(files, desc=f'Deleting frames in {folder_name}'):
         os.remove(file)
@@ -167,7 +168,7 @@ def extract_video_clips(video_id, data_df, use_keyframe_from_video, use_camera_i
         output_path = os.path.join(frame_folder, f'{block_id}.mp4')
         frame_paths = []
         for i in range(start_frame, end_frame + 1):
-            frame_file = os.path.join(frame_folder, f'frame_{i:06d}.jpg')
+            frame_file = os.path.join(frame_folder, f'frame_{i:06d}.png')
             frame_paths.append(frame_file)
         first_frame = cv2.imread(frame_paths[0])
         height, width, _ = first_frame.shape
@@ -183,7 +184,7 @@ def extract_frame_from_video(video_id, use_camera_id, timestamp):
     folder_name = f'{video_id}_updated' if use_camera_id else f'{video_id}'
     frame_folder = os.path.join(OUTPUT_DIR, folder_name)
     frame_index = timestamp_to_frame_index(timestamp)
-    frame_path = os.path.join(frame_folder, f'frame_{frame_index:06d}.jpg')
+    frame_path = os.path.join(frame_folder, f'frame_{frame_index:06d}.png')
     frame = cv2.imread(frame_path)
     return frame
 
@@ -305,7 +306,7 @@ def generate_comic(data_df, video_id, use_camera_id):
         if pd.isna(row['Key Timestamp']):
             continue
         frame = extract_frame_from_video(video_id, use_camera_id, row['Key Timestamp'])
-        image_path = os.path.join(temp_image_dir, f'{idx+1:03d}.jpg')
+        image_path = os.path.join(temp_image_dir, f'{idx+1:03d}.png')
         cv2.imwrite(image_path, frame)
         output_images.append(image_path)
     composite_images = []

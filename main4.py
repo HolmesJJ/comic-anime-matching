@@ -27,7 +27,7 @@ GPT_4O_MODEL = os.getenv('GPT_4O_MODEL')
 GPT_KEY = os.getenv('GPT_KEY')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL')
 # GEMINI_KEY = os.getenv('GEMINI_KEY')
-GEMINI_KEYS_PATH = os.getenv('GEMINI_KEYS_PATH')
+GEMINI_KEYS1_PATH = os.getenv('GEMINI_KEYS1_PATH')
 GEMINI_INVALID_KEYS_PATH = os.getenv('GEMINI_INVALID_KEYS_PATH')
 GEMINI_URL = os.getenv('GEMINI_URL')
 PROMPT1_PATH = os.getenv('PROMPT1_PATH')
@@ -46,7 +46,7 @@ def image_to_base64(image_path):
 
 
 def load_gemini_keys():
-    with open(GEMINI_KEYS_PATH, 'r', encoding='utf-8') as f:
+    with open(GEMINI_KEYS1_PATH, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f if line.strip()]
 
 
@@ -161,7 +161,7 @@ def show_frames(video_id, video_file, interval=0.5):
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f'{video_id} extract frames error')
+        print(f'{video_id} extract frames error: {e}')
     frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
     target_height = 200
     frames_per_row = 6
@@ -195,8 +195,8 @@ def extract_frames(video_id, video_file, interval=0.5):
     try:
         print(f'{video_id} extract frames...')
         subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        print(f'{video_id} extract frames error')
+    except subprocess.CalledProcessError as e:
+        print(f'{video_id} extract frames error: {e}')
     frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
     frames = [cv2.imread(f) for f in frame_files]
     for frame_file in frame_files:
@@ -214,8 +214,8 @@ def extract_first_frame(video_id, video_file):
         frame = cv2.imread(frame_path)
         os.remove(frame_path)
         return frame
-    except subprocess.CalledProcessError:
-        print(f'{video_id} extract frames error')
+    except subprocess.CalledProcessError as e:
+        print(f'{video_id} extract frames error: {e}')
         return None
 
 
