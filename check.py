@@ -102,8 +102,8 @@ def analyze_comic_blocks(data_df, video_id):
             page_folder = os.path.join(comic_id_dir, f'page_{page}')
             all_files = os.listdir(page_folder)
             image_files = set()
-            for filename in all_files:
-                image_files.add(os.path.splitext(filename)[0])
+            for file_name in all_files:
+                image_files.add(os.path.splitext(file_name)[0])
             present_in_csv = images_in_csv & image_files
             missing_in_csv = sorted(image_files - images_in_csv)
             results.append([
@@ -289,8 +289,8 @@ def display_comic_and_video(data_df, video_id, use_keyframe_from_video, use_came
         except Exception as e:
             print(f'Error loading clip {clip_path}: {e}')
     final_video = concatenate_videoclips(final_clips, method='compose')
-    filename = f'{video_id}_updated.mp4' if use_camera_id else f'{video_id}.mp4'
-    final_video_path = os.path.join(OUTPUT_DIR, filename)
+    file_name = f'{video_id}_updated.mp4' if use_camera_id else f'{video_id}.mp4'
+    final_video_path = os.path.join(OUTPUT_DIR, file_name)
     final_video.write_videofile(final_video_path, fps=FRAME_RATE)
     final_video.close()
     for clip in final_clips:
@@ -323,8 +323,8 @@ def generate_comic(data_df, video_id, use_camera_id):
             y_offset += img.height + 10
             img.close()
         composite_images.append(combined)
-    filename = f'{video_id}_updated.pdf' if use_camera_id else f'{video_id}.pdf'
-    pdf_path = os.path.join(OUTPUT_DIR, filename)
+    file_name = f'{video_id}_updated.pdf' if use_camera_id else f'{video_id}.pdf'
+    pdf_path = os.path.join(OUTPUT_DIR, file_name)
     composite_images[0].save(pdf_path, save_all=True, append_images=composite_images[1:])
     for img in composite_images:
         img.close()
@@ -334,8 +334,8 @@ def generate_comic(data_df, video_id, use_camera_id):
 
 def run(video_id, use_keyframe_from_video, use_camera_id):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    filename = f'{video_id}_updated.csv' if use_camera_id else f'{video_id}.csv'
-    data_df = pd.read_csv(os.path.join(OUTPUT_DIR, filename), dtype={'Video ID': str})
+    file_name = f'{video_id}_updated.csv' if use_camera_id else f'{video_id}.csv'
+    data_df = pd.read_csv(os.path.join(OUTPUT_DIR, file_name), dtype={'Video ID': str})
     # print(parse_timestamp('00:03:37:18'))
     if check_timestamps(data_df, use_keyframe_from_video):
         if not use_keyframe_from_video:

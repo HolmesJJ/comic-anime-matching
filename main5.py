@@ -5,7 +5,6 @@ import glob
 import time
 import base64
 import subprocess
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from openai import OpenAI
@@ -27,6 +26,7 @@ GEMINI_KEYS2_PATH = os.getenv('GEMINI_KEYS2_PATH')
 GEMINI_INVALID_KEYS_PATH = os.getenv('GEMINI_INVALID_KEYS_PATH')
 GEMINI_URL = os.getenv('GEMINI_URL')
 PROMPT3_PATH = os.getenv('PROMPT3_PATH')
+PROMPT4_PATH = os.getenv('PROMPT4_PATH')
 
 
 def read_prompt(prompt_path):
@@ -194,8 +194,8 @@ def extract_frames(video_id, video_file, interval=0.5):
         print(f'{video_id} extract frames error: {e}')
     frame_files = sorted(glob.glob(os.path.join(frame_folder, 'frame_*.jpg')))
     frames = [cv2.imread(f) for f in frame_files]
-    # for frame_file in frame_files:
-    #     os.remove(frame_file)
+    for frame_file in frame_files:
+        os.remove(frame_file)
     return frames
 
 
@@ -263,9 +263,54 @@ def run(video_id):
         print('Response:', response)
         full_response = full_response + response + '\n'
         print('Full Response:', full_response)
-        with open(os.path.join(OUTPUT_DIR, 'full.txt'), 'w', encoding='utf-8') as f:
+        with open(os.path.join(OUTPUT_DIR, f'{video_id}_full.txt'), 'w', encoding='utf-8') as f:
             f.write(full_response)
+
+
+def summarize(video_id):
+    with open(os.path.join(OUTPUT_DIR, f'{video_id}_full.txt'), 'r', encoding='utf-8') as f:
+        full_txt = f.read()
+    prompt_content = read_prompt(PROMPT4_PATH).format(ANIME, full_txt)
+    print(prompt_content)
+    gemini_keys = load_gemini_keys()
+    gemini_invalid_keys = load_gemini_invalid_keys()
+    response = None
+    is_all_invalid = True
+    for key in gemini_keys:
+        if key in gemini_invalid_keys:
+            continue
+        print('Gemini Key:', key)
+        is_all_invalid = False
+        is_error = False
+        while True:
+            try:
+                response = get_response(GEMINI_MODEL, key, prompt_content, [], GEMINI_URL)
+                break
+            except Exception as e:
+                error_message = str(e)
+                if 'Error code: 403' in error_message or 'Error code: 429' in error_message:
+                    print('Error 403 / 429:', e)
+                    save_gemini_invalid_key(key)
+                    is_error = True
+                    break
+                elif 'Error code: 503' in error_message:
+                    print('Error 503:', e)
+                    time.sleep(30)
+                    continue
+                else:
+                    print('Error:', e)
+                    break
+        if not is_error:
+            break
+    if is_all_invalid:
+        raise ValueError('All gemini keys are invalid.')
+    if response is None:
+        response = get_response(GPT_O3_MODEL, GPT_KEY, prompt_content, [])
+    print('Response:', response)
+    with open(os.path.join(OUTPUT_DIR, f'{video_id}_summary.txt'), 'w', encoding='utf-8') as f:
+        f.write(response)
 
 
 if __name__ == '__main__':
     run(f'001')
+    summarize(f'001')
