@@ -1,6 +1,7 @@
 import os
 
 from openai import OpenAI
+from mutagen.mp3 import MP3
 from dotenv import load_dotenv
 
 
@@ -40,10 +41,33 @@ def run(video_id):
     print(prompt_content)
     get_response(prompt_content, summary_txt, os.path.join(OUTPUT_DIR, f'{video_id}_summary.mp3'))
     for idx, line in enumerate(lines):
+        if line.lower() == '跳过':
+            continue
         audio_folder = os.path.join(OUTPUT_DIR, video_id)
         os.makedirs(audio_folder, exist_ok=True)
         get_response(prompt_content, line, os.path.join(audio_folder, f'{video_id}_{idx + 1}.mp3'))
 
 
+def get_mp3_duration(file_path):
+    return MP3(file_path).info.length
+
+
+def check_audio_lengths(video_id, max_sec=5):
+    audio_folder = os.path.join(OUTPUT_DIR, video_id)
+    if not os.path.isdir(audio_folder):
+        return
+    over_sized = []
+    for file_name in os.listdir(audio_folder):
+        if file_name.lower().endswith('.mp3'):
+            path = os.path.join(audio_folder, file_name)
+            duration = get_mp3_duration(path)
+            if duration > max_sec:
+                over_sized.append((file_name, duration))
+    if over_sized:
+        msg = '\n'.join([f'  - {f}  {d:.2f}s' for f, d in over_sized])
+        print(msg)
+
+
 if __name__ == '__main__':
-    run(f'001')
+    run('001')
+    check_audio_lengths('001')

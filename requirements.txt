@@ -2,6 +2,7 @@ timm
 tqdm
 numpy
 openai
+mutagen
 torch
 torchaudio
 torchvision
