@@ -19,6 +19,5 @@ checkpoints/
 extension/
 output/
 venv/
-gemini_keys1.txt
-gemini_keys2.txt
+gemini_keys.txt
 gemini_invalid_keys.txt

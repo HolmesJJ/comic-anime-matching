@@ -27,7 +27,7 @@ GPT_4O_MODEL = os.getenv('GPT_4O_MODEL')
 GPT_KEY = os.getenv('GPT_KEY')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL')
 # GEMINI_KEY = os.getenv('GEMINI_KEY')
-GEMINI_KEYS1_PATH = os.getenv('GEMINI_KEYS1_PATH')
+GEMINI_KEYS_PATH = os.getenv('GEMINI_KEYS_PATH')
 GEMINI_INVALID_KEYS_PATH = os.getenv('GEMINI_INVALID_KEYS_PATH')
 GEMINI_URL = os.getenv('GEMINI_URL')
 PROMPT1_PATH = os.getenv('PROMPT1_PATH')
@@ -46,7 +46,7 @@ def image_to_base64(image_path):
 
 
 def load_gemini_keys():
-    with open(GEMINI_KEYS1_PATH, 'r', encoding='utf-8') as f:
+    with open(GEMINI_KEYS_PATH, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f if line.strip()]
 
 
